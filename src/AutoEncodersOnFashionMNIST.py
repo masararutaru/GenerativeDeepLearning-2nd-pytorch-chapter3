@@ -18,7 +18,7 @@ EMBEDDING_DIM = 2
 EPOCHS = 10
 LEARNING_RATE = 1e-3
 
-DEVICE = 'cude'if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cuda'if torch.cuda.is_available() else 'cpu'
 print(DEVICE)
 
 #データローダーの設定
@@ -51,10 +51,49 @@ class Encoder(nn.Module):
             nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, stride = 2, padding = 1),
             nn.ReLU(),
             nn.Conv2d(in_channels = 64, out_channels = 128, kernel_size = 3, stride = 2, padding = 1),
+            #出力サイズの公式Conv2d:floor((in + 2 * padding -kernel_size)/stride) +1)
+            #ReLU関数では出力サイズは変わらない
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(in_features = 2048, out_features = self.latents)
-        )
+            nn.Linear(in_features = 128 * 4 *4, out_features = self.latents)
+        )#latentsがエンコーダーの出力になっている
         
     def forward(self, x):
         return self.model(x)
+
+class Decoder(nn.Module):
+    def __init__(self, latents):
+        super().__init__()
+        self.latents = latents
+        self.fc = nn.Linear(self.latents, 128 * 4 * 4)
+
+        self.model = nn.Sequential(
+            nn.ConvTranspose2d(in_channels = 128, out_channels = 128, kernel_size = 3, stride = 2, padding = 1, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels = 128, out_channels = 64, kernel_size = 3, stride = 2, padding = 1, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels = 64, out_channels = 32, kernel_size = 3, stride = 2, padding = 1, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(in_channels = 32, out_channels = 1, kernel_size = 3, stride = 2, padding = 1, output_padding = 1),
+        )#latentsがデコーダーの入力になっている
+
+    def forward(self, x):
+        x = self.fc(x)
+        x = x.reshape(x.shape[0], 128, 4, 4)
+        x = self.model(x)
+        return x
+
+class AE(nn.Module):
+    def __init__(self, latents):
+        super().__init__()
+        self.encoder = Encoder(latents)
+        self.decoder = Decoder(latents)
+
+    def forward(self, x):
+        z = self.encoder(x)
+        recon_x = self.decoder(z)
+        return recon_x
+
+ae = AE(EMBEDDING_DIM).to(DEVICE)
+#モデルの要約を表示＆設計があっていないとエラー表示になる！
+summary(ae,(1,32,32))

@@ -40,3 +40,21 @@ def get_dataloaders():
 train_loader, test_loader = get_dataloaders()
 print(next(iter(train_loader))[0].shape)
 
+#autoencoderの定義
+class Encoder(nn.Module):
+    def __init__(self, latents):
+        super().__init__()
+        self.latents = latents
+        self.model = nn.Sequential(
+            nn.Conv2d(in_channels = 1, out_channels = 32, kernel_size = 3, stride = 2, padding = 1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, stride = 2, padding = 1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 64, out_channels = 128, kernel_size = 3, stride = 2, padding = 1),
+            nn.ReLU(),
+            nn.Flatten(),
+            nn.Linear(in_features = 2048, out_features = self.latents)
+        )
+        
+    def forward(self, x):
+        return self.model(x)

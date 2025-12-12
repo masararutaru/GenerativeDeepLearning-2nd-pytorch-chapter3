@@ -97,3 +97,9 @@ class AE(nn.Module):
 ae = AE(EMBEDDING_DIM).to(DEVICE)
 #モデルの要約を表示＆設計があっていないとエラー表示になる！
 summary(ae,(1,32,32))
+
+loss_fn = nn.BCEWithLogitsLoss(reduction = 'mean')
+optim = torch.optim.Adam(ae.parameters(), lr = LEARNING_RATE)
+
+train_loader, test_loader = get_dataloaders()
+
